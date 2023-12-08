@@ -1,77 +1,253 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using System.Net.Http;
-using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
+
+using RenovandexProxyAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Add services and configure the app
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddSingleton<BookingRepository>(); // Register the repository as a singleton
+
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MapsBookingPartnersAPI v1"));
 }
 
-app.UseHttpsRedirection();
+// Define and assign the bookingRepository
+var bookingRepository = app.Services.GetRequiredService<BookingRepository>();
 
-// Create a HttpClient instance to send requests
-var client = new HttpClient();
-
-// Set the base address and the API key for the requests
-client.BaseAddress = new Uri("https://example.com/api/");
-client.DefaultRequestHeaders.Add("x-api-key", "your-api-key");
-
-// Define a GET endpoint that takes a query parameter and returns the response from the URL
-app.MapGet("/query", async (string q) =>
+// Endpoint for /companies/feed
+app.MapGet("/v1/companies/feed", () =>
 {
-    // Send a GET request to the URL with the query parameter
-    var response = await client.GetAsync($"?q={q}");
-
-    // Check if the response is successful
-    if (response.IsSuccessStatusCode)
+    var exampleCompanies = new List<FeedCompany>
     {
-        // Read the response content as a string
-        var content = await response.Content.ReadAsStringAsync();
+        new FeedCompany { Name = "Company 1" },
+        new FeedCompany { Name = "Company 2" }
+        // Add other companies as needed
+    };
 
-        // Return the content as the response
-        return Results.Text(content, "application/json");
-    }
-    else
+    var response = new Dictionary<string, List<FeedCompany>>
     {
-        // Return an error message as the response
-        return Results.Problem("Something went wrong");
-    }
-});
+        { "companies", exampleCompanies }
+    };
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateTime.Now.AddDays(index),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    return Results.Ok(response);
 })
-.WithName("GetWeatherForecast");
+.WithTags("Companies");
+
+// Endpoint for /companies/{companyId}/services
+app.MapGet("/v1/companies/{companyId:int}/services", (int companyId) =>
+{
+    // Check if the companyId is valid (for illustration purposes)
+    if (companyId < 1 || companyId > 100) // Adjust the range based on your actual requirements
+    {
+        return Results.BadRequest(new { code = "ResourceNotFoundError" });
+    }
+
+    var exampleServices = new List<Service>
+    {
+        new Service { Name = "Service 1" },
+        new Service { Name = "Service 2" }
+        // Add other services as needed
+    };
+
+    var response = new Dictionary<string, List<Service>>
+    {
+        { "services", exampleServices }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Services");
+
+// Endpoint for /companies/{companyId}/resources
+app.MapGet("/v1/companies/{companyId:int}/resources", (int companyId, [FromBody] List<int> serviceIds) =>
+{
+    // Check if the companyId is valid and handle serviceIds (for illustration purposes)
+    if (companyId < 1 || companyId > 100 || serviceIds == null || serviceIds.Count == 0)
+    {
+        return Results.BadRequest(new { code = "ServiceNotFoundError" });
+    }
+
+    var exampleResources = new List<Resource>
+    {
+        new Resource { Id = 1, Name = "Resource 1" },
+        new Resource { Id = 2, Name = "Resource 2" }
+        // Add other resources as needed
+    };
+
+    var response = new Dictionary<string, List<Resource>>
+    {
+        { "resources", exampleResources }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Resources");
+
+
+// Endpoint for /companies/{companyId}/resources/{resourceId}/reviews
+app.MapGet("/v1/companies/{companyId:int}/resources/{resourceId:int}/reviews", (int companyId, int resourceId) =>
+{
+    // Check if the companyId and resourceId are valid (for illustration purposes)
+    if (companyId < 1 || companyId > 100 || resourceId < 1 || resourceId > 100)
+    {
+        return Results.BadRequest(new { code = "InvalidParameters" });
+    }
+
+    var exampleReviews = new List<Review>
+    {
+        new Review { Id = 1, Comment = "Review 1" },
+        new Review { Id = 2, Comment = "Review 2" }
+        // Add other reviews as needed
+    };
+
+    var response = new Dictionary<string, List<Review>>
+    {
+        { "reviews", exampleReviews }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Reviews");
+
+// Endpoint for /v1/companies/{companyId:int}/available_date
+
+
+// Endpoint for /companies/{companyId}/available_time_slots
+
+
+// Endpoint for creating a booking
+app.MapPost("/v1/bookings", (BookingInput bookingInput) =>
+{
+    // Check if the bookingInput is valid and handle other parameters (for illustration purposes)
+    if (bookingInput == null || bookingInput.CompanyId < 1 || string.IsNullOrEmpty(bookingInput.UserPhone))
+    {
+        return Results.BadRequest(new { code = "InvalidInput" });
+    }
+
+    // Assume you have a function to create a booking and return the created booking
+    var createdBooking = bookingRepository.CreateBooking(bookingInput);
+
+    var response = new Dictionary<string, Booking>
+    {
+        { "booking", createdBooking }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Bookings");
+
+// Endpoint for getting information about a booking
+app.MapGet("/v1/bookings/{bookingId}", (string bookingId) =>
+{
+    // Assume you have a function to get a booking by ID
+    var booking = bookingRepository.GetBookingById(bookingId);
+
+    if (booking == null)
+    {
+        return Results.NotFound();
+    }
+
+    var response = new Dictionary<string, Booking>
+    {
+        { "booking", booking }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Bookings");
+
+// Endpoint for updating a booking
+app.MapPut("/v1/bookings/{bookingId}", (string bookingId, BookingUpdate bookingUpdate) =>
+{
+    // Check if the bookingId and bookingUpdate are valid (for illustration purposes)
+    if (string.IsNullOrEmpty(bookingId) || bookingUpdate == null)
+    {
+        return Results.BadRequest(new { code = "InvalidInput" });
+    }
+
+    // Assume you have a function to update a booking and return the updated booking
+    var updatedBooking = bookingRepository.UpdateBooking(bookingId, bookingUpdate);
+
+    if (updatedBooking == null)
+    {
+        return Results.NotFound();
+    }
+
+    var response = new Dictionary<string, Booking>
+    {
+        { "booking", updatedBooking }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Bookings");
+
+// Endpoint for deleting a booking
+app.MapDelete("/v1/bookings/{bookingId}", (string bookingId) =>
+{
+    // Assume you have a function to delete a booking
+    var isDeleted = bookingRepository.DeleteBooking(bookingId);
+
+    if (!isDeleted)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok();
+})
+.WithTags("Bookings");
 
 app.Run();
 
-internal record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
+public class FeedCompany
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    public string Name { get; set; }
+    // Add other properties as needed
 }
+
+public class Service
+{
+    public string Name { get; set; }
+    // Add other properties as needed
+}
+
+public class Resource
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    // Add other properties as needed
+}
+
+public class Review
+{
+    public int Id { get; set; }
+    public string Comment { get; set; }
+    // Add other properties as needed
+}
+
+public class AvailableDate
+{
+    public DateTime Date { get; set; }
+    // Add other properties as needed
+}
+
+public class AvailableTimeSlot
+{
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    // Add other properties as needed
+}
+
