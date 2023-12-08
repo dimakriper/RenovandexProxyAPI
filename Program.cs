@@ -1,3 +1,8 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using System.Net.Http;
+using System.Threading.Tasks;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -15,6 +20,35 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Create a HttpClient instance to send requests
+var client = new HttpClient();
+
+// Set the base address and the API key for the requests
+client.BaseAddress = new Uri("https://example.com/api/");
+client.DefaultRequestHeaders.Add("x-api-key", "your-api-key");
+
+// Define a GET endpoint that takes a query parameter and returns the response from the URL
+app.MapGet("/query", async (string q) =>
+{
+    // Send a GET request to the URL with the query parameter
+    var response = await client.GetAsync($"?q={q}");
+
+    // Check if the response is successful
+    if (response.IsSuccessStatusCode)
+    {
+        // Read the response content as a string
+        var content = await response.Content.ReadAsStringAsync();
+
+        // Return the content as the response
+        return Results.Text(content, "application/json");
+    }
+    else
+    {
+        // Return an error message as the response
+        return Results.Problem("Something went wrong");
+    }
+});
 
 var summaries = new[]
 {
