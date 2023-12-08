@@ -122,10 +122,84 @@ app.MapGet("/v1/companies/{companyId:int}/resources/{resourceId:int}/reviews", (
 })
 .WithTags("Reviews");
 
-// Endpoint for /v1/companies/{companyId:int}/available_date
+app.MapGet("/v1/companies/{companyId:int}/available_dates", (HttpContext context, int companyId, DateTime from, DateTime to) =>
+{
+    // Check if the companyId is valid and handle other parameters (for illustration purposes)
+    if (companyId < 1 || companyId > 100)
+    {
+        return Results.BadRequest(new { code = "ServiceNotFoundError" });
+    }
+
+    // Retrieve servicesIds from the query string
+    var servicesIds = context.Request.Query["servicesIds"].ToArray();
+
+    // Check if servicesIds is provided
+    if (servicesIds == null || servicesIds.Length == 0)
+    {
+        return Results.BadRequest(new { code = "RequiredServiceIdsMissing" });
+    }
+
+    // Your logic for handling the request here...
+
+    var exampleAvailableDates = new List<AvailableDate>
+    {
+        new AvailableDate { Date = DateTime.Now.AddDays(1) },
+        new AvailableDate { Date = DateTime.Now.AddDays(2) }
+        // Add other available dates as needed
+    };
+
+    var response = new Dictionary<string, List<AvailableDate>>
+    {
+        { "availableDates", exampleAvailableDates }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Available Dates")
+.Produces(StatusCodes.Status200OK)
+.Produces<object>(StatusCodes.Status400BadRequest);
+
+
 
 
 // Endpoint for /companies/{companyId}/available_time_slots
+app.MapGet("/v1/companies/{companyId:int}/available_time_slots", async (HttpContext context, int companyId, DateTime date) =>
+{
+    // Check if the companyId is valid (for illustration purposes)
+    if (companyId < 1 || companyId > 100)
+    {
+        return Results.BadRequest(new { code = "ServiceNotFoundError" });
+    }
+
+    // Retrieve servicesIds from the query string
+    var servicesIds = context.Request.Query["servicesIds"].ToArray();
+
+    // Check if servicesIds is provided
+    if (servicesIds == null || servicesIds.Length == 0)
+    {
+        return Results.BadRequest(new { code = "RequiredServiceIdsMissing" });
+    }
+
+    // Your logic for handling the request here...
+
+    var exampleAvailableTimeSlots = new List<AvailableTimeSlot>
+    {
+        new AvailableTimeSlot { StartTime = DateTime.Now.AddHours(9), EndTime = DateTime.Now.AddHours(10) },
+        new AvailableTimeSlot { StartTime = DateTime.Now.AddHours(14), EndTime = DateTime.Now.AddHours(15) }
+        // Add other available time slots as needed
+    };
+
+    var response = new Dictionary<string, List<AvailableTimeSlot>>
+    {
+        { "availableTimeSlots", exampleAvailableTimeSlots }
+    };
+
+    return Results.Ok(response);
+})
+.WithTags("Available Time Slots")
+.Produces(StatusCodes.Status200OK)
+.Produces<object>(StatusCodes.Status400BadRequest);
+
 
 
 // Endpoint for creating a booking
